@@ -205,10 +205,7 @@ def train(
                     "eval_return_mean": float(eval_returns.mean()),
                     "eval_return_std": eval_std,
                     "eval_n_compromised": float(compromised.mean()),
-                    "train_return": float(
-                        last_train_return if episode_return == 0.0
-                        else episode_return
-                    ),
+                    "train_return": float(last_train_return),
                     "epsilon": epsilon,
                     "loss": mean_loss,
                 }

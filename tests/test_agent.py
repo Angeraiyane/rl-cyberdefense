@@ -176,3 +176,96 @@ def test_target_sync_uses_environment_step_when_provided(config):
             agent.online_net.parameters(), agent.target_net.parameters()
         )
     )
+
+
+class FixedQNetwork(torch.nn.Module):
+    """Deterministic Q-network used to verify Bellman targets."""
+
+    def __init__(self, values):
+        super().__init__()
+        self.values = torch.nn.Parameter(
+            torch.tensor(values, dtype=torch.float32)
+        )
+
+    def forward(self, observations):
+        return self.values.unsqueeze(0).expand(observations.shape[0], -1)
+
+
+def install_fixed_networks(agent, online_values, target_values):
+    agent.online_net = FixedQNetwork(online_values).to(agent.device)
+    agent.target_net = FixedQNetwork(target_values).to(agent.device)
+
+    for parameter in agent.target_net.parameters():
+        parameter.requires_grad_(False)
+
+    # The test networks replace the original networks.
+    agent.optimizer = torch.optim.SGD(
+        agent.online_net.parameters(), lr=0.0
+    )
+
+
+def test_b2_targets_distinguish_terminated_from_truncated(config):
+    agent = DQNAgent(config, double=False, seed=42)
+
+    online_values = [0.0] * 31
+    target_values = [10.0, 20.0, 30.0] + [0.0] * 28
+    install_fixed_networks(agent, online_values, target_values)
+
+    batch = {
+        "obs": np.zeros((2, 40), dtype=np.float32),
+        "actions": np.array([0, 0]),
+        "rewards": np.array([1.0, 2.0], dtype=np.float32),
+        "next_obs": np.zeros((2, 40), dtype=np.float32),
+        # First transition: true termination.
+        # Second transition: truncation, so bootstrap is preserved.
+        "terminated": np.array([1.0, 0.0], dtype=np.float32),
+    }
+
+    _, td_errors = agent.update(
+        batch, np.ones(2, dtype=np.float32)
+    )
+
+    expected_targets = np.array(
+        [1.0, 2.0 + 0.99 * 30.0],
+        dtype=np.float32,
+    )
+
+    np.testing.assert_allclose(
+        td_errors,
+        expected_targets,
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+
+def test_b5_double_dqn_uses_online_selection_and_target_evaluation(config):
+    agent = DQNAgent(config, double=True, seed=42)
+
+    # Online selects action 1 (Q=5), not action 2 (Q=3).
+    online_values = [0.0, 5.0, 3.0] + [0.0] * 28
+
+    # Target evaluates action 1 as 7, although its own maximum is 100
+    # at action 2. Double DQN must use 7, not 100.
+    target_values = [0.0, 7.0, 100.0] + [0.0] * 28
+    install_fixed_networks(agent, online_values, target_values)
+
+    batch = {
+        "obs": np.zeros((1, 40), dtype=np.float32),
+        "actions": np.array([0]),
+        "rewards": np.array([1.0], dtype=np.float32),
+        "next_obs": np.zeros((1, 40), dtype=np.float32),
+        "terminated": np.array([0.0], dtype=np.float32),
+    }
+
+    _, td_errors = agent.update(
+        batch, np.ones(1, dtype=np.float32)
+    )
+
+    expected_td_error = 1.0 + 0.99 * 7.0
+
+    np.testing.assert_allclose(
+        td_errors,
+        np.array([expected_td_error], dtype=np.float32),
+        rtol=1e-5,
+        atol=1e-5,
+    )

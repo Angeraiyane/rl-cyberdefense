@@ -104,3 +104,22 @@ def test_final_checkpoint_uses_final_evaluation_count(small_config, tmp_path):
     # The final checkpoint is evaluated on the configured 3 episodes.
     assert len(result["evaluations"]) == 2
     assert result["evaluations"][-1]["step"] == 6
+
+
+def test_train_return_keeps_last_completed_episode(
+    small_config, tmp_path
+):
+    output = tmp_path / "train_return.csv"
+
+    train(
+        small_config,
+        seed=42,
+        out_csv=output,
+    )
+
+    with output.open(newline="", encoding="utf-8") as file:
+        rows = list(csv.DictReader(file))
+
+    # At step 3, the episode horizon is 5:
+    # no complete training episode exists yet.
+    assert float(rows[0]["train_return"]) == 0.0
