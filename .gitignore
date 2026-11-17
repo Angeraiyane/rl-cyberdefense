@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+# Éditeurs et systèmes
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Fichiers lourds produits localement (les CSV de results/raw/ SONT versionnés)
+*.pt
+checkpoints/

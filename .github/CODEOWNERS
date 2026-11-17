@@ -1,0 +1,8 @@
+# CODEOWNERS : qui GitHub doit appeler pour relire une pull request.
+# Les deux sont propriétaires de tout. GitHub ne demande jamais à l'auteur d'une PR
+# de se relire lui-même : quand Ange ouvre une PR, c'est Babacar qui est appelé,
+# et inversement. Combiné à la règle "Require review from Code Owners", aucune PR
+# ne peut être fusionnée sans l'approbation de l'autre.
+# (La répartition des fichiers par personne est dans le README et le plan.)
+
+*   @Angeraiyane @BabacarFaye3203

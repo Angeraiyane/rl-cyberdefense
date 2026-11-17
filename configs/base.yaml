@@ -1,0 +1,50 @@
+# Configuration de référence du projet.
+# RÈGLE : après le gel du protocole (checkpoint C4), on ne modifie plus ce fichier.
+# Toutes les configurations de l'ablation utilisent exactement ces valeurs.
+
+env:
+  n_hosts: 10
+  # Deux sous-réseaux en anneau (0-4 et 5-9) reliés par la passerelle 0-5.
+  edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0],
+          [5, 6], [6, 7], [7, 8], [8, 9], [9, 5],
+          [0, 5]]
+  p_spread: 0.15          # proba qu'un hôte compromis infecte un voisin sain, par pas
+  patch_factor: 0.2       # un hôte patché est infecté avec p_spread * patch_factor
+  p_external: 0.01        # proba par pas qu'un hôte au hasard soit compromis de l'extérieur
+  tpr: 0.80               # proba qu'un hôte compromis lève une alerte (vraie détection)
+  fpr: 0.10               # proba qu'un hôte sain lève une alerte (fausse alerte) -> notre variation
+  isolation_steps: 5      # durée d'une isolation avant reconnexion automatique
+  horizon: 100            # troncature : nombre maximal de pas par épisode
+  loss_threshold: 8       # fin réelle si au moins 8 hôtes sont compromis
+  availability_weight: 0.3  # poids d'un hôte isolé dans la récompense
+  action_costs:
+    noop: 0.0
+    isolate: 0.05
+    restore: 0.10
+    patch: 0.05
+
+agent:
+  hidden_sizes: [128, 128]
+  gamma: 0.99
+  lr: 0.0005
+  grad_clip_norm: 10.0
+  buffer_size: 50000
+  batch_size: 64
+  learning_starts: 1000
+  train_freq: 1
+  target_update_interval: 1000
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 30000
+  per_alpha: 0.6
+  per_beta_start: 0.4
+  per_beta_end: 1.0
+  per_eps: 1.0e-6
+
+training:
+  total_steps: 100000
+  eval_interval: 5000
+  eval_episodes: 20
+  final_eval_episodes: 100
+  train_env_seed_offset: 1000
+  eval_env_seed_start: 900000
